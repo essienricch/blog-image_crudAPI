@@ -1,7 +1,8 @@
 const Post = require("../model/blogPost");
 const multer = require("multer");
-const { body, validator } = require("express-validator");
+const { body, validationResult } = require("express-validator");
 
+const storage = multer.memoryStorage();
 var upload = multer({ dest: "uploads/" });
 
 const getAllPosts = async (req, res, next) => {
@@ -19,6 +20,7 @@ const getAllPosts = async (req, res, next) => {
   }
 };
 
+//Add a blog post:
 const validatePosts = [
   body("title").notEmpty(),
   body("body").notEmpty(),
@@ -28,7 +30,7 @@ const validatePosts = [
   upload.single("file"),
 
   (req, res, next) => {
-    const errors = validator(req);
+    const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
       res.status(422).json({ errors: errors.array() });
@@ -62,6 +64,30 @@ const createPost = async (req, res, next) => {
   }
 };
 
+//Get a single image:
+const getImage = async (req, res, next) => {
+    const postId = req.params.id;
+
+  
+    try {
+      const post = await Post.findById(postId);
+  
+      const image = post.file;
+      if (!image) {
+        res.status(404).json({ message: 'Image not found' });
+        return;
+      }
+  
+      res.set('Content-Type', image.contentType);
+      res.send(image.data);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  };
+
+
+
+//Get a single post:
 const getPostById = async (req, res) => {
     try{
         const post = await Post.findById(req.params.id);
@@ -78,3 +104,4 @@ exports.createPost = createPost;
 exports.getPostById = getPostById;
 exports.getAllPosts = getAllPosts;
 exports.validatePosts = validatePosts;
+module.exports.uploadImg = getImage
