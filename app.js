@@ -1,7 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const mongoose = require("mongoose");
 const env = require("dotenv");
+const sequelize = require("./util/db");
 
 env.config();
 
@@ -15,14 +15,18 @@ app.use(express.json());
 app.use("/users", user_router);
 app.use("/post", post_router);
 
+// sequelize.sync( )
+// .then((result) =>
+//   {console.log(result)})
+//   .catch((error) => {console.log(error)});
 
-mongoose
-  .connect(process.env.db_token, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
+sequelize
+  .authenticate()
+  .then(() => {
+    console.log("Connection has been established successfully.");
   })
-  .then(() => console.log("connecting to blog db"))
-  .catch((err) => console.log(err));
-
+  .catch((error) => {
+    console.log("Unable to connect to the database:", error);
+  });
 
 app.listen(2000, () => console.log("Starting at 2000..."));

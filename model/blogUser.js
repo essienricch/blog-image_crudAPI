@@ -1,23 +1,43 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema
+const Sequelize = require("sequelize");
+const post = require("../model/blogPost");
+const db = require("../util/db");
 
-const userSchema = new Schema({
-    userName: {
-        type: String,
-        required: true
-      },
-      email: {
-        type: String,
-        required: true,
-        unique: true
-      },
-      password: {
-        type: String,
-        required: true
-      }
-});
+const userSchema = db.define(
+  "user",
+  {
+    id: {
+      type: Sequelize.INTEGER,
+      autoIncrement: true,
+      allowNull: false,
+      primaryKey: true,
+    },
+
+    username: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+
+    email: {
+      type: Sequelize.STRING,
+      allowNull: false,
+      unique: true,
+    },
+
+    password: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+  },
+  {
+    freezeTableName:true
+  }
+);
+
+userSchema.sync({alter: true})
+.then((message) => console.log(message, "data is ready..." ))
+.catch((err) =>console.log(err));
+
+userSchema.hasMany(post);
 
 
-const User = mongoose.model('User', userSchema);
-
-module.exports = User;
+module.exports = userSchema;

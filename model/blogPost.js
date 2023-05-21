@@ -1,34 +1,35 @@
-const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+const Sequelize = require("sequelize");
+const db = require("../util/db");
 
-const blogScheme = new Schema({
-    
-  title: {
-    type: "string",
-    require: true,
+const blogScheme = db.define(
+  "post",
+  {
+    id: {
+      type: Sequelize.INTEGER,
+      autoIncrement: true,
+      allowNull: false,
+      primaryKey: true,
+    },
+
+    title: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+
+    body: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
+
+    file: {
+      type: Sequelize.STRING,
+    },
   },
+  {
+    freezeTableName:true
+  }
+);
 
-  body: {
-    type: "string",
-    require: true,
-  },
+blogScheme.sync({alter:true});
 
-  file: {
-    type: "string",
-  },
-
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-  },
-
-  created_at: {
-    type: Date,
-    default: Date.now,
-  },
-});
-
-const Post = mongoose.model("Post", blogScheme);
-
-module.exports = Post;
+module.exports = blogScheme;
