@@ -1,6 +1,5 @@
 const Post = require("../model/blogPost");
 const multer = require("multer");
-const sharp = require("sharp");
 const { body, validationResult } = require("express-validator");
 
 const storage = multer.memoryStorage();
@@ -30,7 +29,7 @@ const validatePosts = [
   },
 ];
 
-const createPost = async (req, res) => {
+const createPost =  (req, res) => {
   const { title, body } = req.body;
   const file = req.file;
 
@@ -38,16 +37,12 @@ const createPost = async (req, res) => {
     res.status(400).json({ message: "No file uploaded" });
   }
 
-  try {
-    // Resize the file using sharp library
-    const resizedFile = await sharp(file.buffer)
-      .resize({ width: 1000 }) // Adjust the width as per your requirement
-      .toBuffer();
+ 
 
     // Convert the resized file to a Base64 string
     const fileData = resizedFile.toString("base64");
 
-    await Post.create({
+     Post.create({
       title: title,
       body: body,
       file: fileData.originalname,
@@ -56,11 +51,12 @@ const createPost = async (req, res) => {
       //   contentType: file.mimetype,
       //   filename: file.originalname,
       // },
-    });
-    res.status(201).send({ message: "Post successfully created" });
-  } catch (error) {
+    }).then(() => {res.status(201).send({ message: "Post successfully created" });
+  })
+    
+  .catch ((error)=>  {
     res.status(500).json({ message: error.message });
-  }
+  })
 };
 
 //upload images:
