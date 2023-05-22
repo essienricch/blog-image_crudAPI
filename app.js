@@ -1,5 +1,4 @@
 const express = require("express");
-const serverless = require('serverless-http')
 const bodyParser = require("body-parser");
 const env = require("dotenv");
 const sequelize = require("./util/db");
@@ -14,7 +13,7 @@ const post_router = require("./router/postRoutes");
 
 
 
-app.use("/.netlify/functions/app", route)
+
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
