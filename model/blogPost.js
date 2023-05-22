@@ -1,5 +1,6 @@
 const Sequelize = require("sequelize");
 const db = require("../util/db");
+const User = require("./blogUser")
 
 const blogScheme = db.define(
   "post",
@@ -30,6 +31,7 @@ const blogScheme = db.define(
   }
 );
 
+// blogScheme.belongsTo(User, { foreignKey: 'userId' })
 blogScheme.sync({alter:true});
 
 module.exports = blogScheme;

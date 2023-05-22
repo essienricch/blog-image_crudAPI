@@ -1,9 +1,10 @@
-const Sequelize = require("sequelize");
+const { Sequelize, Model } = require("sequelize");
 const post = require("../model/blogPost");
 const db = require("../util/db");
 
+
 const userSchema = db.define(
-  "user",
+  'user',
   {
     id: {
       type: Sequelize.INTEGER,
@@ -28,16 +29,24 @@ const userSchema = db.define(
       allowNull: false,
     },
   },
+
   {
     freezeTableName:true
-  }
+  },
 );
+
+// userSchema.init(User, {
+//   db,
+//   modelName: userSchema,
+  
+// })
 
 userSchema.sync({alter: true})
 .then((message) => console.log(message, "data is ready..." ))
 .catch((err) =>console.log(err));
 
-userSchema.hasMany(post);
+// userSchema.hasMany(post);
 
+ 
 
 module.exports = userSchema;

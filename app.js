@@ -1,14 +1,20 @@
 const express = require("express");
+const serverless = require('serverless-http')
 const bodyParser = require("body-parser");
 const env = require("dotenv");
 const sequelize = require("./util/db");
 
 env.config();
 
+const app = express();
+const route = express.Router();
+
 const user_router = require("./router/userRoutes");
 const post_router = require("./router/postRoutes");
 
-const app = express();
+
+
+app.use("/.netlify/functions/app", route)
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
@@ -29,4 +35,6 @@ sequelize
     console.log("Unable to connect to the database:", error);
   });
 
-app.listen(2000, () => console.log("Starting at 2000..."));
+app.listen(process.env.PORT || 2000, () => console.log("Starting at 2000..."));
+
+module.exports = app;

@@ -1,3 +1,4 @@
+const e = require("express");
 const User = require("../model/blogUser");
 const { body, validationResult } = require("express-validator");
 
@@ -23,79 +24,84 @@ const validate = [
 const addNewUser = (req, res) => {
   const { username, email, password } = req.body;
 
-    return User.create({ username, email, password })
-    .then(() => res.status(201).send("User successfully Created")).
-     catch ((err) => {
-    res.status(500).send(err.message);
-  })
+  return User.create({ username, email, password })
+    .then(() => res.status(201).send("User successfully Created"))
+    .catch((err) => {
+      res.status(500).send(err.message);
+    });
 };
 
 //Get all blog users:
-const getAllUsers = (req, res, next) => {
-  let users;
-
-  try {
-    users = User.findAll();
-
-    if (users.length === 0) {
-      return res.status(422).json({ message: "No users found" });
-    } else {
-      return res.status(200).json({ users });
-    }
-  } catch (err) {
-    console.log(err);
-    return next(err);
-  }
+const getAllUsers = (req, res) => {
+  User.findAll()
+    .then((users) => {
+      if (users.length > 0) {
+        return res.send(users).status(200);
+      } else {
+        return res.send("users not found").status(404);
+      }
+    })
+    .catch((err) => {
+      res.status(500).json(err.message);
+    });
 };
 
 //Get a blog user by id:
 const getUserById = (req, res) => {
-  try {
-    const user =  User.findOne(req.params.id);
-    if (!user) {
-      return res.status(404).send("User not found");
-    }
-    return res.json(user).status(200);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
+  const id = req.params.id;
+
+  User.findByPk(id)
+    .then((user) => {
+      if (user) {
+        res.status(200).json(user);
+      } else {
+        res.status(404).send("User not found");
+      }
+    })
+    .catch((error) => {
+      res.status(500).send(error.message);
+    });
 };
 
 //delete a blog user by id:
 const deleteUser = (req, res) => {
-  let saveduser;
-
-  try {
-    // const user = await User.delete(req.params.id);
-    saveduser = User.findOne(req.params.id);
-    if (!saveduser) {
-      return res.status(404).send("User not found");
-    }
-    User.destroy(saveduser);
-    return res.status(200).send("User successfully deleted");
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
+  User.destroy({ where: { id: req.params.id } })
+    .then((user) => {
+      if (!user) {
+        return res.status(404).send("User not found");
+      } else {
+        return res.status(200).send("User successfully deleted");
+      }
+    })
+    .catch((error) => {
+      res.status(500).send(error.message);
+    });
 };
 
 //update user by id:
 const updateUser = (req, res) => {
-  let saveduser;
+  let id = req.params.id;
 
-  try {
-    saveduser = User.findOne(req.params.id);
+  User.findByPk(id)
+    .then((user) => {
+      if (!user) {
+        return res.status(404).json("User not found");
+      } else {
 
-    if (!saveduser) {
-      return res.status(404).send("User not found");
-    }
-    saveduser.username = req.body.username;
-    saveduser.email = req.body.email;
-    saveduser.password = req.body.password;
-    saveduser.save();
-    return res.status(200).send("User successfully updated");
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
+        const updatedUser = req.body;
+        User.update(updatedUser, {
+          where: {
+            id: id
+          }
+        })
+        .then(() => {
+          res.status(200).json("User successfully updated");
+        });
+      }
+    })
+    .catch((error) => {
+      res.status(500).json(error.message);
+    });
 };
 
 module.exports.getAllUsers = getAllUsers;
