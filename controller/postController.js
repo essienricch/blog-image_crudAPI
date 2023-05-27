@@ -1,8 +1,18 @@
 const Post = require("../model/blogPost");
 const multer = require("multer");
 const { body, validationResult } = require("express-validator");
+const fs = require("fs");
+const cloudinary = require("cloudinary").v2;
+require("dotenv").config();
 
 const storage = multer.memoryStorage();
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET,
+});
+
 var upload = multer({
   dest: "uploads/",
   storage: storage,
@@ -29,34 +39,54 @@ const validatePosts = [
   },
 ];
 
-const createPost =  (req, res) => {
+const createPost = (req, res) => {
   const { title, body } = req.body;
   const file = req.file;
 
   if (!file) {
-    res.status(400).json({ message: "No file uploaded" });
+    res.status(400).send({ message: "No file uploaded" });
   }
 
- 
+  // Save to local storage
+  const localFilePath = `uploads/${file.originalname}`;
 
-    // Convert the resized file to a Base64 string
-    const fileData = resizedFile.toString("base64");
+  fs.writeFile(localFilePath, file.buffer, (err) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send("Failed to save file to local storage.");
+    }
+    // res.status(201).send(`File saved to local storage: ${localFilePath}`);
+  });
 
-     Post.create({
-      title: title,
-      body: body,
-      file: fileData.originalname,
-      // file: {
-      //   data: file.buffer,
-      //   contentType: file.mimetype,
-      //   filename: file.originalname,
-      // },
-    }).then(() => {res.status(201).send({ message: "Post successfully created" });
-  })
+  // Save to Cloudinary
+  cloudinary.uploader.upload(localFilePath, (error, result) => {
+    if (error) {
+      console.error(error);
+      return res.status(500).send("Failed to save file to Cloudinary.");
+    }
     
-  .catch ((error)=>  {
-    res.status(500).json({ message: error.message });
+    // res.send(`File saved to Cloudinary: ${result.secure_url}`);
+  });
+
+  Post.create({
+    title: title,
+    body: body,
+    file: localFilePath,
+    // file: {
+    //   data: file.buffer,
+    //   contentType: file.mimetype,
+    //   filename: file.originalname,
+    // },
   })
+    .then(() => {
+      console.log("file saved in the cloudinary");
+      res.status(201).send({ message: "Post successfully created" });
+    })
+
+    .catch((error) => {
+      console.log(error);
+      res.status(500).json({ message: error.message });
+    });
 };
 
 //upload images:
@@ -73,11 +103,20 @@ const uploadImage = (req, res) => {
         Post.update(updatedPost, {
           where: { id: id },
         });
+
         upload.single(file);
+
+        cloudinary.uploader.upload(file.path, (error, result) => {
+          if (error) {
+            console.error(error);
+            return res.status(500).send("Failed to save file to cloudinary.");
+          }
+          res.send(`File saved to Cloudinary: ${result.secure_url}`);
+        });
       }
     })
     .then(() => {
-      res.status(200).json("Post successfully updated");
+      res.status(200).json("File successfully updated");
     })
     .then(
       (req,
