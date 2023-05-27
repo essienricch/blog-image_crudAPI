@@ -12,12 +12,14 @@ const user_router = require("./router/userRoutes");
 const post_router = require("./router/postRoutes");
 
 
-
+app.get("/", (req, res) => {
+  res.json({message: "Welcome to my blog endpoints!"})})
 
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
-app.get("/", () => {"Welcome to my blog endpoints!"})
+
+
 app.use("/users", user_router);
 app.use("/post", post_router);
 
