@@ -17,7 +17,7 @@ const post_router = require("./router/postRoutes");
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
-
+app.get("/", () => {"Welcome to my blog endpoints!"})
 app.use("/users", user_router);
 app.use("/post", post_router);
 
