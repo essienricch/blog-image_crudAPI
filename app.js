@@ -5,6 +5,7 @@ const sequelize = require("./util/db");
 
 
 
+
 const app = express();
 // const route = express.Router();
 
@@ -37,6 +38,9 @@ sequelize.sync( )
 //     console.log("Unable to connect to the database:", error);
 //   });
 
+
+
 app.listen(process.env.PORT || 2000, () => console.log("Starting at 2000..."));
+
 
 module.exports = app;
