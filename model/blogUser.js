@@ -1,18 +1,12 @@
-const { Sequelize, Model } = require("sequelize");
-const post = require("../model/blogPost");
+const { Sequelize } = require("sequelize");
+const Post = require("../model/blogPost");
 const db = require("../util/db");
 
 
 const userSchema = db.define(
   'user',
   {
-    id: {
-      type: Sequelize.INTEGER,
-      autoIncrement: true,
-      allowNull: false,
-      primaryKey: true,
-    },
-
+   
     username: {
       type: Sequelize.STRING,
       allowNull: false,
@@ -22,6 +16,7 @@ const userSchema = db.define(
       type: Sequelize.STRING,
       allowNull: false,
       unique: true,
+      isEmail: true,
     },
 
     password: {
@@ -30,22 +25,12 @@ const userSchema = db.define(
     },
   },
 
-  {
-    freezeTableName:true
-  },
 );
 
-// userSchema.init(User, {
-//   db,
-//   modelName: userSchema,
-  
-// })
 
-userSchema.sync({alter: true})
-.then((message) => console.log(message, "data is ready..." ))
-.catch((err) =>console.log(err));
 
-// userSchema.hasMany(post);
+userSchema.hasMany(Post, {foreignKey: 'userId', onDelete: 'CASCADE'});
+Post.belongsTo(userSchema)
 
  
 

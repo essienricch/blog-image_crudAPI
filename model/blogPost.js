@@ -1,23 +1,17 @@
-const Sequelize = require("sequelize");
+const {DataTypes, Sequelize} = require("sequelize");
 const db = require("../util/db");
-const User = require("./blogUser")
 
-const blogScheme = db.define(
+
+const blogPost = db.define(
   "post",
   {
-    id: {
-      type: Sequelize.INTEGER,
-      autoIncrement: true,
-      allowNull: false,
-      primaryKey: true,
-    },
 
     title: {
       type: Sequelize.STRING,
       allowNull: false,
     },
 
-    body: {
+    content: {
       type: Sequelize.STRING,
       allowNull: false,
     },
@@ -25,13 +19,24 @@ const blogScheme = db.define(
     file: {
       type: Sequelize.STRING,
     },
-  },
-  {
-    freezeTableName:true
+
+    tags:{
+      type: DataTypes.ARRAY(DataTypes.STRING),
+      allowNull: false,
+  
+    get() {
+      // Parse the array of strings stored in the database to ensure it's always an array
+      const tagsString = this.getDataValue('tags');
+      return tagsString ? tagsString.split(',') : [];
+    },
+    set(tagsArray) {
+      // Join the array of strings into a comma-separated string before storing in the database
+      this.setDataValue('tags', tagsArray.join(','));
+    },
+    }
   }
 );
 
-// blogScheme.belongsTo(User, { foreignKey: 'userId' })
-blogScheme.sync({alter:true});
 
-module.exports = blogScheme;
+
+module.exports = blogPost;

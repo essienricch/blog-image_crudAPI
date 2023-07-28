@@ -1,6 +1,6 @@
 const express = require('express');
 
-const { getAllPosts, validatePosts, createPost, getPostById,  deletePost, uploadImage } = require('../controller/postController');
+const { getAllPosts, validatePosts, createPost, getPostById,  deletePost, updatePost, getByPostTitle } = require('../controller/postController');
 
 
 
@@ -10,7 +10,9 @@ router.get('/', getAllPosts)
 
 router.post('/new', validatePosts, createPost)
 
-router.put('/uploadimage/:id', uploadImage)
+router.patch('/update/:id', updatePost)
+
+router.get('/get-by-title', getByPostTitle)
 
 router.get('/:id', getPostById)
 
