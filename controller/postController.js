@@ -34,7 +34,7 @@ const validatePosts = [
 ];
 
 //Add a blog post:
-const createPost = (req, res) => {
+const createPost = async (req, res) => {
   const { title, content, file, tags, userId } = req.query;
 
   // Save file/images if exists:
@@ -67,12 +67,12 @@ const createPost = (req, res) => {
   }
 
   const postData = { title, content, localFilePath, tags, userId };
-  Post.create(postData)
+ await Post.create(postData)
     .then((post) => {
       console.log("post successfully created by user: ", post.userId);
       res
         .status(201)
-        .send(`Detail: post successfully created, ${post.toJson()} `);
+        .send(`Detail: post successfully created, ${post} `);
     })
 
     .catch((error) => {

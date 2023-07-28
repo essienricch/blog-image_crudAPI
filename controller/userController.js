@@ -21,14 +21,14 @@ const validate = [
 ];
 
 //Add a new user:
-const addNewUser = (req, res) => {
+const addNewUser = async (req, res) => {
   const { username, email, password } = req.body;
   const userData = { username, email, password };
-  return User.create(userData).then((user) =>
+  await User.create(userData).then((user) =>
     console
       .log(user.toJson())
       .then((user) =>
-        res.status(201).send(`User successfully Created ${user.toJson()}`)
+        res.status(201).send(`User successfully Created ${user}`)
       )
       .catch((err) => {
         res.status(500).send(err.message);
