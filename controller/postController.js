@@ -62,21 +62,20 @@ const createPost = async (req, res) => {
     overwrite: true,
   };
 
-  // Extract the file from the request and store it in the "uploads" directory
-  console.log(req.file);
-  const { path } = req.file;
   try {
-    if (!path) {
-      return res.status(400).send("Invalid file data received.");
+    let fileUrl = null;
+    if (req.file) {
+      const { path } = req.file;
+      console.log("File stored in:", path);
+
+      // Save file/images to Cloudinary:
+      const response = await cloudinary.uploader.upload(path, options);
+
+      console.log("Image uploaded to cloud: ", response);
+      fs.unlinkSync(path); // Remove the file from local storage after upload to Cloudinary
+
+      fileUrl = response.secure_url;
     }
-
-    console.log("File stored in:", path);
-
-    // Save file/images to Cloudinary:
-    const response = await cloudinary.uploader.upload(path, options);
-
-    console.log("Image uploaded to cloud: ", response);
-    fs.unlinkSync(path); // Remove the file from local storage after upload to Cloudinary
 
     // Extract other fields from the request body
     const { title, content, tags, userId } = req.body;
@@ -88,24 +87,20 @@ const createPost = async (req, res) => {
       content,
       tags,
       userId,
-      file: response.secure_url,
+      file: fileUrl,
     };
-    await Post.create(postData)
-      .then((post) => {
-        console.log("Post successfully created by userId: ", post.userId);
-        res
-          .status(201)
-          .send(`Detail: post successfully created, ${JSON.stringify(post)}`);
-      })
-      .catch((error) => {
-        console.error(error.message);
-        res.status(505).json({ message: error.message });
-      });
+    const post = await Post.create(postData);
+
+    console.log("Post successfully created by userId: ", post.userId);
+    res
+      .status(201)
+      .send(`Detail: post successfully created, ${JSON.stringify(post)}`);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error handling file upload." });
   }
 };
+
 
 //update post:
 const updatePost = async (req, res) => {
