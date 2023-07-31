@@ -5,17 +5,19 @@ const sequelize = require("./util/db");
 const user_router = require("./router/userRoutes");
 const post_router = require("./router/postRoutes");
 
+
 const app = express();
+
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
 
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to my blog api endpoints!" });
 });
 
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.json());
 
-app.use("/user", user_router);
-app.use("/post", post_router);
+app.use("/api/v1/user", user_router);
+app.use("/api/v1/post", post_router);
 
 sequelize
   .sync({ alter: true })

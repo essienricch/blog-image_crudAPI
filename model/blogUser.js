@@ -30,7 +30,7 @@ const userSchema = db.define(
 
 
 userSchema.hasMany(Post, {foreignKey: 'userId', onDelete: 'CASCADE'});
-Post.belongsTo(userSchema)
+Post.belongsTo(userSchema, { foreignKey: "userId" })
 
  
 

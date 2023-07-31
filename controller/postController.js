@@ -1,158 +1,243 @@
+require("dotenv").config();
 const Post = require("../model/blogPost");
-const multer = require("multer");
-const { body, validationResult } = require("express-validator");
 const fs = require("fs");
-const cloudinary = require("../util/mediaConfig");
-const { log } = require("console");
+const cloudinary = require("cloudinary").v2;
 
-const storage = multer.memoryStorage();
 
-var upload = multer({
-  dest: "uploads/",
-  storage: storage,
-  limits: {
-    fileSize: 255 * 1024 * 1024, // 5MB file size limit
-  },
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET,
+  secure: true,
 });
 
 //validate posts:
-const validatePosts = [
-  body("title").notEmpty(),
-  body("content").notEmpty(),
+const validatePosts = async (req, res, next) => {
+  try {
+    console.log("in the validate method");
+    const { title, content, tags, userId } = req.body;
+    console.log(title);
+    console.log(req.body);
 
-  body("tags").notEmpty(),
+    // Check if title, content, and tags are present and not empty
+    if (!title || !content || !tags || !userId) {
+      console.log("in the if block");
+      return res.status(422).json({
+        error: "Title, content, tags, and userId are required fields.",
+      });
+    }
 
-  (req, res, next) => {
-    const errors = validationResult(req.body);
+    // Check if title and content are not empty strings
+    if (
+      typeof title !== "string" ||
+      title.trim() === "" ||
+      typeof content !== "string" ||
+      content.trim() === ""
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Title and content must be non-empty strings." });
+    }
 
-    if (!errors.isEmpty()) {
-      res.status(422).json({ errors: errors.array() });
-      return;
+    // Check if tags is an array and not empty
+    if (!Array.isArray(tags) || tags.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "Tags must be a non-empty array." });
     }
     next();
-  },
-];
+  } catch (error) {
+    // Handle any errors that occur during validation
+    res.status(500).json({ error: "Error validating post data." });
+  }
+};
 
 //Add a blog post:
 const createPost = async (req, res) => {
-  const { title, content, file, tags, userId } = req.query;
+  console.log("in the create post method");
 
-  // Save file/images if exists:
-  if (file) {
-    // Save file/images to local storage:
-    const localFilePath = `uploads/${file.originalname}`;
+  const options = {
+    use_filename: true,
+    unique_filename: false,
+    overwrite: true,
+  };
 
-    fs.writeFile(localFilePath, file.buffer, (err) => {
-      console.error(err);
-      return res.status(500).send("Failed to save file to local storage.");
-    });
+  // Extract the file from the request and store it in the "uploads" directory
+  console.log(req.file);
+  const { path } = req.file;
+  try {
+    if (!path) {
+      return res.status(400).send("Invalid file data received.");
+    }
+
+    console.log("File stored in:", path);
 
     // Save file/images to Cloudinary:
+    const response = await cloudinary.uploader.upload(path, options);
 
-    cloudinary.uploader
-      .upload(localFilePath, { secure: true })
-      .then((response) => {
-        console.log("Image uploaded to cloud: ", response);
+    console.log("Image uploaded to cloud: ", response);
+    fs.unlinkSync(path); // Remove the file from local storage after upload to Cloudinary
+
+    // Extract other fields from the request body
+    const { title, content, tags, userId } = req.body;
+    console.log(tags);
+
+    // Create the post or perform other operations with the extracted data
+    const postData = {
+      title,
+      content,
+      tags,
+      userId,
+      file: response.secure_url,
+    };
+    await Post.create(postData)
+      .then((post) => {
+        console.log("Post successfully created by userId: ", post.userId);
+        res
+          .status(201)
+          .send(`Detail: post successfully created, ${JSON.stringify(post)}`);
       })
       .catch((error) => {
-        res.send(error.message).status(500);
+        console.error(error.message);
+        res.status(505).json({ message: error.message });
       });
-    // cloudinary.uploader.upload(localFilePath, (error, result) => {
-    //   if (error) {
-    //     console.error(error);
-    //     return res.status(500).send("Failed to save file to Cloudinary.");
-    //   }
-
-    // res.send(`File saved to Cloudinary: ${result.secure_url}`);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error handling file upload." });
   }
-
-  const postData = { title, content, localFilePath, tags, userId };
- await Post.create(postData)
-    .then((post) => {
-      console.log("post successfully created by user: ", post.userId);
-      res
-        .status(201)
-        .send(`Detail: post successfully created, ${post} `);
-    })
-
-    .catch((error) => {
-      console.log(error.message);
-      res.status(500).json({ message: error.message });
-    });
 };
 
 //update post:
-const updatePost = (req, res) => {
-  let id = req.params.id;
-  const { title, content, file, tags } = req.query;
-  const updatedPost = { title, content, file, tags };
-  Post.findByPk(id)
-    .then((data) => {
-      console.log(data.title.toJson());
-      return data.save(updatedPost);
-    })
-    .then((value) => {
-      console.log("post updated successfully");
-      res.status(200).send(value.toJson());
-    })
-    .catch((error) => {
-      console.log(error.message);
-      res.status(500).send(error.message);
-    });
+const updatePost = async (req, res) => {
+  try {
+    let id = req.params.id;
+    const { title, content, tags, userId } = req.body;
+    const updatedPost = { title, content, tags, userId };
+
+    const post = await Post.findByPk(id);
+
+    if (!post) {
+      throw new Error("Post not found");
+    }
+
+    // Check if there's a new file to upload
+    if (req.file) {
+      const { path } = req.file;
+      // Delete the previous image from Cloudinary if it exists
+      if (post.file) {
+        const public_id = post.file.split("/").pop().split(".").shift();
+        await cloudinary.uploader.destroy(public_id);
+      }
+
+      const response = await cloudinary.uploader.upload(path, { secure: true });
+      updatedPost.file = response.secure_url;
+    }
+
+    await post.update(updatedPost);
+
+    console.log("Post updated successfully");
+    res.status(200).send(JSON.stringify(updatedPost));
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send(error.message);
+  }
+};
+
+//Get All Post By UserId:
+const getAllPostsByUserId = async (req, res) => {
+  try {
+    const userId = req.body.userId;
+    const posts = await Post.findAll({ where: { userId } });
+
+    if (posts.length === 0) {
+      return res.status(404).send("No posts found for the user.");
+    }
+
+    console.log("Posts retrieved successfully");
+    res.status(200).json(posts);
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send(error.message);
+  }
 };
 
 //Get all posts:
 const getAllPosts = (req, res) => {
   Post.findAll()
-    .then((posts) =>
-      posts.forEach((element) => {
-        console.log(element.toJson());
-        res.send(element.toJson()).status(200);
-      })
-    )
-    // return res.status(200).json(posts);
-
+    .then((posts) => {
+      const postsJson = posts.map((post) => post.toJSON());
+      console.log(postsJson);
+      res.status(200).json(postsJson);
+    })
     .catch((err) => {
-      return res.send(err.message).status(404);
+      res
+        .status(500)
+        .json({ error: "Failed to fetch posts from the database.", err });
     });
 };
 
 //Get a single post:
-const getPostById = (req, res) => {
-  let postId = req.params.id;
+const getPostById = async (req, res) => {
+  try {
+    let postId = req.params.id;
 
-  Post.findByPk(postId)
-    .then((post) => {
-      return res.json(post).status(200);
-    })
-    .catch((error) => {
-      res.status(404).send({ message: error.message });
-    });
+    const post = await Post.findByPk(postId);
+
+    if (!post) {
+      throw new Error("Post not found");
+    }
+
+    console.log(JSON.stringify(post));
+    res.status(200).json(post);
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
 };
 
 //Get a Post by Post Title:
 const getPostByTitle = async (req, res) => {
-  const { title } = req.body;
-  await Post.findOne({ title: title })
-    .then((post) => {
-      console.log("post with title %s found.", post.title);
-      res.status(200).send(post);
-    })
-    .catch((error) => {
-      console.log("error: %s", error.message);
-      res.status(500).send(error.message);
-    });
+  try {
+    const { title } = req.body;
+    console.log(title);
+
+    const post = await Post.findOne({ where: { title: title } });
+
+    if (!post) {
+      throw new Error(`Post with title ${title} not found`);
+    }
+
+    console.log("Post with title %s found.", post.title);
+    res.status(200).send(post);
+  } catch (error) {
+    console.log("Error: %s", error.message);
+    res.status(404).send({ message: error.message });
+  }
 };
 
 //Delete a post by id:
-const deletePost = (req, res) => {
-  const id = req.params.id;
-  Post.findByPk(id)
-    .then((post) => {
-      console.log("post deleted successfully");
-      return res.status(200).send(post.destroy());
-    })
-    .catch((error) => res.status(404).send(error.message));
+const deletePost = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const post = await Post.findByPk(id);
+
+    if (!post) {
+      return res.status(404).send("Detail: Post not found");
+    }
+
+    // Delete the image from Cloudinary if it exists
+    if (post.file) {
+      const public_id = post.file.split("/").pop().split(".").shift();
+      await cloudinary.uploader.destroy(public_id);
+    }
+
+    await post.destroy();
+
+    console.log("Post deleted successfully");
+    res.status(200).send("Detail: post deleted successfully");
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send(error.message);
+  }
 };
 
 exports.createPost = createPost;
@@ -161,4 +246,5 @@ exports.getAllPosts = getAllPosts;
 exports.validatePosts = validatePosts;
 exports.deletePost = deletePost;
 exports.updatePost = updatePost;
-exports.getByPostTitle = getPostByTitle
+exports.getByPostTitle = getPostByTitle;
+exports.getAllPostsByUserId = getAllPostsByUserId;

@@ -1,22 +1,32 @@
-const express = require('express');
+const express = require("express");
 
-const { getAllPosts, validatePosts, createPost, getPostById,  deletePost, updatePost, getByPostTitle } = require('../controller/postController');
-
+const {
+    getAllPosts,
+    validatePosts,
+    createPost,
+    getPostById,
+    deletePost,
+    updatePost,
+    getByPostTitle,
+    getAllPostsByUserId
+} = require("../controller/postController");
+const upload = require("../util/multer")
 
 
 const router = express.Router();
 
-router.get('/', getAllPosts)
+router.get("/", getAllPosts);
 
-router.post('/new', validatePosts, createPost)
+router.post("/new", upload.single('file'), validatePosts, createPost);
 
-router.patch('/update/:id', updatePost)
+router.post("/get-by-userid", getAllPostsByUserId)
 
-router.get('/get-by-title', getByPostTitle)
+router.patch("/update/:id", upload.single('file'),updatePost);
 
-router.get('/:id', getPostById)
+router.get("/get-by-title", getByPostTitle);
 
-router.delete('/:id', deletePost)
+router.get("/:id", getPostById);
 
+router.delete("/:id", deletePost);
 
 module.exports = router;
